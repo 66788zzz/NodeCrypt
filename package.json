@@ -1,5 +1,5 @@
 {
-  "name": "nodecrypt",
+  "name": "化羽成简 - 加密聊天",
   "version": "1.0.0",
   "description": "端到端加密节点",
   "main": "worker/index.js",
