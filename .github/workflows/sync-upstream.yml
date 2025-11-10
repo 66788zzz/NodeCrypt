@@ -2,17 +2,41 @@ name: Sync upstream
 
 on:
   schedule:
-    - cron: '0 2 * * *'
+    - cron: '0 0 */7 * *'  # 每7天检查一次
   workflow_dispatch:
 
 jobs:
-  sync:
+  check-and-sync:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: |
+        with:
+          fetch-depth: 0
+      
+      - name: Configure Git
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+      
+      - name: Check upstream for updates
+        id: check
+        run: |
           git remote add upstream https://github.com/shuaiplus/NodeCrypt.git
           git fetch upstream
+          UPSTREAM_COMMIT=$(git rev-parse upstream/main)
+          CURRENT_COMMIT=$(git rev-parse origin/main)
+          
+          if [ "$UPSTREAM_COMMIT" != "$CURRENT_COMMIT" ]; then
+            echo "has_updates=true" >> $GITHUB_OUTPUT
+            echo "Upstream has new commits: $UPSTREAM_COMMIT"
+          else
+            echo "has_updates=false" >> $GITHUB_OUTPUT
+            echo "No updates available"
+          fi
+      
+      - name: Sync from upstream
+        if: steps.check.outputs.has_updates == 'true'
+        run: |
           git checkout main
-          git merge --ff-only upstream/main || git merge upstream/main --no-edit
+          git merge upstream/main --allow-unrelated-histories --no-edit
           git push origin main
